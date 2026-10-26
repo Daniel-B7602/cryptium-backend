@@ -1,0 +1,27 @@
+@'
+# Visual Studio
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# .NET: archivos generados
+**/bin/
+**/obj/
+
+# Configuración local y secretos
+.env
+.env.*
+!.env.example
+secrets.json
+appsettings.Development.json
+
+# Certificados y claves privadas
+*.pfx
+*.p12
+*.key
+
+# Logs
+*.log
+'@ | Set-Content -Encoding utf8 .gitignore
