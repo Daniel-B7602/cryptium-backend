@@ -7,6 +7,13 @@ namespace cryptium_backend
     {
         public static void Main(string[] args)
         {
+            if (args.Contains("--run-tests"))
+            {
+                int failed = CryptoTests.RunAll();
+                Environment.Exit(failed == 0 ? 0 : 1);
+                return;
+            }
+
             var builder = WebApplication.CreateBuilder(args);
 
             builder.Services.AddCors(options =>
@@ -24,6 +31,7 @@ namespace cryptium_backend
             builder.Services.AddScoped<FileCryptoService>();
             builder.Services.AddScoped<AnalysisService>();
             builder.Services.AddScoped<MalwareScanService>();
+            builder.Services.AddScoped<AudioSteganographyService>();
 
             // Add services to the container.
 

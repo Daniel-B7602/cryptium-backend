@@ -30,6 +30,11 @@ namespace cryptium_backend.Controllers
             if (string.IsNullOrWhiteSpace(request.Key))
                 return BadRequest("La clave no puede estar vacía.");
 
+            // Estadísticas rigurosas del texto original en claro (para comparación pedagógica)
+            byte[] plainBytes = Encoding.UTF8.GetBytes(request.Text);
+            double plainEntropy = _analysisService.CalculateEntropy(plainBytes);
+            Dictionary<int, int> plainFrequency = _analysisService.CalculateFrequency(plainBytes);
+
             string encrypted =
                 _cryptoService.Encrypt(
                     request.Text,
@@ -55,7 +60,14 @@ namespace cryptium_backend.Controllers
                 entropy,
                 totalBytes = encryptedBytes.Length,
                 uniqueBytes = frequency.Count,
-                frequency
+                frequency,
+                plaintext = new
+                {
+                    entropy = plainEntropy,
+                    totalBytes = plainBytes.Length,
+                    uniqueBytes = plainFrequency.Count,
+                    frequency = plainFrequency
+                }
             });
         }
 
@@ -73,7 +85,9 @@ namespace cryptium_backend.Controllers
             {
                 var result = _analysisService.AnalyzeAvalanche(
                     request.Text,
-                    request.Key
+                    request.Key,
+                    request.ByteIndex,
+                    request.BitIndex
                 );
 
                 return Ok(result);

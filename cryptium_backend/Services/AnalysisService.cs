@@ -77,7 +77,7 @@ namespace cryptium_backend.Services
             );
         }
 
-        public AvalancheResponse AnalyzeAvalanche(string text, string key)
+        public AvalancheResponse AnalyzeAvalanche(string text, string key, int? targetByte = null, int? targetBit = null)
         {
             // 1. Derivación de clave idéntica a CryptoService (SHA-256)
             byte[] keyBytes = SHA256.HashData(Encoding.UTF8.GetBytes(key));
@@ -89,11 +89,15 @@ namespace cryptium_backend.Services
                 throw new ArgumentException("El texto no puede estar vacío.");
             }
 
-            // 3. Preparar Entrada 2 (invertir exactamente 1 bit en el Byte 0: bit menos significativo LSB)
+            // 3. Preparar Entrada 2 (invertir exactamente 1 bit en el Byte y Bit seleccionados)
+            int byteIdx = Math.Clamp(targetByte ?? 0, 0, plainBytes1.Length - 1);
+            int bitIdx = Math.Clamp(targetBit ?? 0, 0, 7);
+            byte mask = (byte)(1 << bitIdx);
+
             byte[] plainBytes2 = (byte[])plainBytes1.Clone();
-            byte origByte = plainBytes1[0];
-            plainBytes2[0] ^= 0x01; // Inversión del bit 0
-            byte modByte = plainBytes2[0];
+            byte origByte = plainBytes1[byteIdx];
+            plainBytes2[byteIdx] ^= mask; // Inversión del bit indicado
+            byte modByte = plainBytes2[byteIdx];
 
             // 4. Cifrado AES controlado en entorno aislado con IV compartido
             using Aes aes = Aes.Create();
@@ -122,6 +126,8 @@ namespace cryptium_backend.Services
             // Reutilización directa de CalculateAvalanche para mantener consistencia métrica
             double percentage = CalculateAvalanche(cipherBytes1, cipherBytes2);
 
+            string bitDesc = bitIdx == 0 ? "LSB - Bit 0" : (bitIdx == 7 ? "MSB - Bit 7" : $"Bit {bitIdx}");
+
             return new AvalancheResponse
             {
                 OriginalText = text,
@@ -130,7 +136,7 @@ namespace cryptium_backend.Services
                 ModifiedByteHex = $"0x{modByte:X2}",
                 OriginalByteBinary = Convert.ToString(origByte, 2).PadLeft(8, '0'),
                 ModifiedByteBinary = Convert.ToString(modByte, 2).PadLeft(8, '0'),
-                FlippedBitInfo = "Byte 0, Bit 0 (LSB - Bit menos significativo)",
+                FlippedBitInfo = $"Byte {byteIdx}, Bit {bitIdx} ({bitDesc}, máscara 0x{mask:X2})",
                 DifferentBits = differentBits,
                 TotalBits = totalBits,
                 AvalanchePercentage = percentage,

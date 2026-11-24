@@ -1,4 +1,4 @@
-﻿using cryptium_backend.Models;
+using cryptium_backend.Models;
 using cryptium_backend.Services;
 using Microsoft.AspNetCore.Mvc;
 
@@ -19,48 +19,72 @@ namespace cryptium_backend.Controllers
         public IActionResult Encrypt([FromBody] CryptoRequest request)
         {
             if (string.IsNullOrWhiteSpace(request.Text))
-                return BadRequest("El texto no puede estar vacío.");
+                return BadRequest(new { message = "El texto no puede estar vacío." });
 
             if (string.IsNullOrWhiteSpace(request.Key))
-                return BadRequest("La clave no puede estar vacía.");
+                return BadRequest(new { message = "Debes proporcionar una clave válida." });
 
-            string encrypted = _cryptoService.Encrypt(
-                request.Text,
-                request.Key
-            );
-
-            return Ok(new
+            try
             {
-                encryptedText = encrypted
-            });
+                var response = _cryptoService.EncryptText(
+                    request.Text,
+                    request.Key,
+                    request.Algorithm ?? "AES"
+                );
+
+                return Ok(response);
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = $"Error durante el cifrado: {ex.Message}" });
+            }
         }
 
         [HttpPost("decrypt")]
         public IActionResult Decrypt([FromBody] CryptoRequest request)
         {
             if (string.IsNullOrWhiteSpace(request.Text))
-                return BadRequest("El texto cifrado no puede estar vacío.");
+                return BadRequest(new { message = "El texto cifrado no puede estar vacío." });
 
             if (string.IsNullOrWhiteSpace(request.Key))
-                return BadRequest("La clave no puede estar vacía.");
+                return BadRequest(new { message = "Debes proporcionar una clave válida." });
 
             try
             {
-                string decrypted = _cryptoService.Decrypt(
+                var response = _cryptoService.DecryptText(
                     request.Text,
-                    request.Key
+                    request.Key,
+                    request.Algorithm ?? "AES"
                 );
 
-                return Ok(new
-                {
-                    decryptedText = decrypted
-                });
+                return Ok(response);
             }
-            catch
+            catch (ArgumentException ex)
             {
-                return BadRequest(
-                    "No se pudo descifrar. Verifica la clave y el texto."
-                );
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = $"Error durante el descifrado: {ex.Message}" });
+            }
+        }
+
+        [HttpGet("rsa/generate-keys")]
+        [HttpPost("rsa/generate-keys")]
+        public IActionResult GenerateRsaKeys([FromQuery] int keySize = 2048)
+        {
+            try
+            {
+                var keyPair = _cryptoService.GenerateRsaKeyPair(keySize);
+                return Ok(keyPair);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"Error generando par de claves RSA: {ex.Message}" });
             }
         }
     }
